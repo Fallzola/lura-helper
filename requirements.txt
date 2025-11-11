@@ -1,3 +1,10 @@
+# Dependências do Bot Plurall
+
+# Selenium - Automação de navegador
 selenium==4.15.2
+
+# WebDriver Manager - Gerenciamento automático do ChromeDriver
 webdriver-manager==4.0.1
+
+# Requests - HTTP requests para API
 requests==2.31.0
