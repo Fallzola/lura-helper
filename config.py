@@ -17,9 +17,10 @@ class Config:
     ELEMENT_WAIT_TIMEOUT = 10
     MINIMAL_LOAD_TIMEOUT = 3
 
-    # Tentativas
-    MAX_RETRIES = 5
-    RETRY_DELAY = 1  # segundos entre tentativas
+    # Tentativas - AJUSTADO para evitar chutes rápidos sem carregamento
+    MAX_RETRIES = 3  # Reduzido de 5 para 3 tentativas
+    RETRY_DELAY = 2  # Aumentado de 1 para 2 segundos entre tentativas
+    WAIT_AFTER_CLICK = 3  # Tempo de espera após clicar em uma opção
 
     # Configurações de respostas
     MIN_DOTS = 20  # Mínimo de pontos para questões de texto

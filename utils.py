@@ -105,24 +105,36 @@ def print_summary(total_questions: int, failed_questions: List, total_time: floa
     Args:
         total_questions: Total de questões processadas
         failed_questions: Lista de questões que falharam
-        total_time: Tempo total de execução
+        total_time: Tempo total de execução (inclui login e tudo)
     """
-    logger.info("\n" + "=" * 50)
-    logger.info("📊 RESUMO DA EXECUÇÃO")
-    logger.info("=" * 50)
-    logger.info(f"Total de questões processadas: {total_questions}")
-    logger.info(f"Questões bem-sucedidas: {total_questions - len(failed_questions)}")
-    logger.info(f"Questões com falha: {len(failed_questions)}")
-    logger.info(f"Taxa de sucesso: {((total_questions - len(failed_questions)) / total_questions * 100):.1f}%")
-    logger.info(f"Tempo total: {format_time(total_time)}")
-    logger.info(f"Tempo médio por questão: {(total_time / total_questions):.1f}s")
+    logger.info("\n" + "=" * 60)
+    logger.info("📊 RESUMO GERAL DA EXECUÇÃO")
+    logger.info("=" * 60)
 
+    # Estatísticas de questões
+    successful_questions = total_questions - len(failed_questions)
+    success_rate = (successful_questions / total_questions * 100) if total_questions > 0 else 0
+
+    logger.info(f"📝 Total de questões: {total_questions}")
+    logger.info(f"✅ Questões bem-sucedidas: {successful_questions}")
+    logger.info(f"❌ Questões com falha: {len(failed_questions)}")
+    logger.info(f"📈 Taxa de sucesso: {success_rate:.1f}%")
+
+    # Estatísticas de tempo
+    logger.info(f"\n⏱️  Tempo total de execução (login + exercícios): {format_time(total_time)}")
+    if total_questions > 0:
+        avg_time = total_time / total_questions
+        logger.info(f"⏱️  Tempo médio por questão: {avg_time:.1f}s")
+
+    # Lista de questões que falharam
     if failed_questions:
-        logger.info("\n❌ Questões que falharam:")
+        logger.info(f"\n❌ QUESTÕES QUE FALHARAM ({len(failed_questions)}):")
         for idx, link in failed_questions:
-            logger.info(f"   - Questão {idx}: {link}")
+            logger.info(f"   • Questão {idx}: {link}")
+    else:
+        logger.info("\n🎉 TODAS AS QUESTÕES FORAM RESOLVIDAS COM SUCESSO!")
 
-    logger.info("=" * 50)
+    logger.info("=" * 60)
 
 
 def validate_url(url: str) -> bool:

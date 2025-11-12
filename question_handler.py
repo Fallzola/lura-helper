@@ -33,7 +33,7 @@ class QuestionHandler:
 
     def detect_question_type(self, max_attempts: int = None) -> QuestionType:
         """
-        Detecta o tipo de questão atual
+        Detecta o tipo de questão atual com melhor espera de carregamento
 
         Args:
             max_attempts: Número máximo de tentativas
@@ -51,10 +51,12 @@ class QuestionHandler:
                 # Verifica questão de texto já respondida (alta prioridade)
                 for selector in Config.Selectors.ANSWER_CONTAINERS:
                     if self.driver_manager.find_element(By.CSS_SELECTOR, selector):
+                        logger.info("✅ Questão de texto detectada: já respondida")
                         return QuestionType.TEXT_ANSWERED
 
                 # Verifica questão de texto não respondida
                 if self.driver_manager.find_element(By.CSS_SELECTOR, Config.Selectors.TEXTAREA):
+                    logger.info("✅ Questão de texto detectada: aguardando resposta")
                     return QuestionType.TEXT
 
                 # Verifica questão de múltipla escolha
@@ -65,27 +67,33 @@ class QuestionHandler:
                         try:
                             check = option.find_element(By.XPATH, f'.//*[@data-test-id="icon-Check"]')
                             if check:
+                                logger.info("✅ Questão múltipla escolha detectada: já respondida")
                                 return QuestionType.MULTIPLE_CHOICE_ANSWERED
                         except:
                             continue
+                    logger.info(f"✅ Questão múltipla escolha detectada: {len(options)} opções")
                     return QuestionType.MULTIPLE_CHOICE
 
                 # Verifica questão de imagem
                 if self.driver_manager.find_element(By.CSS_SELECTOR, Config.Selectors.IMAGE_BUTTON):
+                    logger.info("✅ Questão de imagem detectada")
                     return QuestionType.IMAGE
 
-                # Se não detectou nada
+                # Se não detectou nada, aguarda mais tempo antes de tentar novamente
                 if attempt < max_attempts:
-                    log_retry(f"Tentativa {attempt}/{max_attempts} falhou, aguardando...")
-                    time.sleep(Config.RETRY_DELAY)
+                    wait_time = Config.RETRY_DELAY * attempt  # Espera progressiva
+                    log_retry(f"Tentativa {attempt}/{max_attempts} falhou, aguardando {wait_time}s...")
+                    time.sleep(wait_time)
                     continue
 
+                logger.warning("❌ Tipo de questão não identificado após todas as tentativas")
                 return QuestionType.UNKNOWN
 
             except Exception as e:
                 logger.warning(f"Erro na detecção (tentativa {attempt}): {str(e)}")
                 if attempt < max_attempts:
-                    time.sleep(Config.RETRY_DELAY)
+                    wait_time = Config.RETRY_DELAY * attempt  # Espera progressiva
+                    time.sleep(wait_time)
                     continue
                 return QuestionType.UNKNOWN
 
@@ -265,12 +273,16 @@ class QuestionHandler:
                 if chosen_index < len(fresh_options):
                     fresh_options[chosen_index].click()
                     log_success("Opção clicada, aguardando resposta...")
+
+                    # IMPORTANTE: Aguarda um tempo fixo após o clique para garantir carregamento
+                    logger.info(f"⏳ Aguardando {Config.WAIT_AFTER_CLICK}s para página processar...")
+                    time.sleep(Config.WAIT_AFTER_CLICK)
                 else:
                     logger.error("Índice de opção inválido")
                     continue
 
-                # Aguarda resposta
-                wait = WebDriverWait(self.driver, 8)
+                # Aguarda resposta com timeout maior
+                wait = WebDriverWait(self.driver, 10)  # Aumentado de 8 para 10 segundos
                 try:
                     wait.until(lambda d:
                         len(d.find_elements(By.CSS_SELECTOR, f'{Config.Selectors.OPTION_LIST} {Config.Selectors.ICON_CHECK}')) > 0 or

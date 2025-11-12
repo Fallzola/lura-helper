@@ -16,7 +16,7 @@ from exceptions import PluralBotException
 from webdriver_manager import WebDriverManager
 from question_handler import QuestionHandler, QuestionType
 from api_client import PluralAPIClient
-from utils import load_links_from_file, Timer, print_summary, validate_url
+from utils import load_links_from_file, Timer, print_summary, validate_url, format_time
 
 
 class PluralBot:
@@ -34,6 +34,8 @@ class PluralBot:
         self.question_handler = None
         self.api_client = None
         self.failed_questions: List[Tuple[int, str]] = []
+        self.exercises_timer = None  # Timer para todos os exercícios
+        self.exercises_start_time = None  # Timestamp do início dos exercícios
 
     def initialize(self):
         """Inicializa componentes do bot"""
@@ -153,6 +155,13 @@ class PluralBot:
         log_start("INICIANDO PRIMEIRA PASSADA...")
         failed = []
 
+        # Inicia o timer dos exercícios no primeiro exercício
+        if self.exercises_timer is None:
+            self.exercises_timer = Timer("Todos os Exercícios")
+            self.exercises_timer.start()
+            self.exercises_start_time = time.time()
+            logger.info("⏱️  Timer dos exercícios iniciado!")
+
         for i, link in enumerate(links, 1):
             success = self.process_question(i, len(links), link)
 
@@ -202,7 +211,7 @@ class PluralBot:
 
     def run(self):
         """Executa o bot"""
-        total_timer = Timer("Execução Total")
+        total_timer = Timer("Execução Total (incluindo login)")
         total_timer.start()
 
         try:
@@ -218,11 +227,22 @@ class PluralBot:
                 logger.error("Nenhum link para processar!")
                 return
 
-            # Primeira passada
+            # Primeira passada (timer dos exercícios inicia aqui)
             self.failed_questions = self.first_pass(links)
 
             # Segunda passada
             self.second_pass(self.failed_questions, len(links))
+
+            # Para o timer dos exercícios
+            if self.exercises_timer:
+                exercises_time = self.exercises_timer.stop()
+                logger.info("\n" + "=" * 60)
+                logger.info("⏱️  TEMPO DOS EXERCÍCIOS (do primeiro ao último):")
+                logger.info(f"⏰ Início: {time.strftime('%H:%M:%S', time.localtime(self.exercises_start_time))}")
+                logger.info(f"⏰ Fim: {time.strftime('%H:%M:%S', time.localtime(time.time()))}")
+                logger.info(f"⏱️  Duração: {format_time(exercises_time)}")
+                logger.info(f"⏱️  Total em segundos: {exercises_time:.1f}s")
+                logger.info("=" * 60)
 
             # Resultado final
             log_celebration("Processamento concluído!")
@@ -235,11 +255,12 @@ class PluralBot:
             logger.error(f"Erro geral: {str(e)}")
 
         finally:
-            # Para timer
+            # Para timer total
             total_time = total_timer.stop()
 
             # Imprime sumário
-            print_summary(len(links), self.failed_questions, total_time)
+            if 'links' in locals():
+                print_summary(len(links), self.failed_questions, total_time)
 
             # Fecha navegador
             if self.driver_manager:
